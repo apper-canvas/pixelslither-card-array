@@ -3,12 +3,9 @@
 @import 'tailwindcss/utilities';
 
 @layer base {
-  * {
-    @apply border-border;
-  }
   
   body {
-    @apply bg-background text-foreground;
+@apply bg-surface-900 text-surface-50;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
   
