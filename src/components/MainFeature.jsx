@@ -10,20 +10,44 @@ const INITIAL_FOOD = { x: 5, y: 5 }
 
 // Level configurations
 const LEVEL_CONFIGS = {
-  easy: {
-    name: 'Easy',
-    speed: 250,
+  beginner: {
+    name: 'Beginner',
+    speed: 300,
     obstacles: 0,
-    description: 'Perfect for beginners',
-    icon: 'Smile',
+    boardSize: { width: 25, height: 18 },
+    layoutType: 'empty',
+    description: 'Perfect for first-time players',
+    icon: 'Heart',
     color: 'neon-green'
   },
-  hard: {
-    name: 'Hard', 
-    speed: 150,
-    obstacles: 8,
-    description: 'Challenge for experts',
+  mazeRunner: {
+    name: 'Maze Runner',
+    speed: 200,
+    obstacles: 12,
+    boardSize: { width: 30, height: 20 },
+    layoutType: 'maze',
+    description: 'Navigate through maze walls',
+    icon: 'Map',
+    color: 'neon-blue'
+  },
+  speedDemon: {
+    name: 'Speed Demon',
+    speed: 120,
+    obstacles: 4,
+    boardSize: { width: 28, height: 18 },
+    layoutType: 'scattered',
+    description: 'Fast-paced challenge',
     icon: 'Zap',
+    color: 'neon-yellow'
+  },
+  nightmare: {
+    name: 'Nightmare',
+    speed: 100,
+    obstacles: 18,
+    boardSize: { width: 24, height: 16 },
+    layoutType: 'border',
+    description: 'Ultimate challenge for experts',
+    icon: 'Skull',
     color: 'neon-pink'
   }
 }
@@ -78,6 +102,107 @@ const gameLoopRef = useRef()
     return newFood
   }, [boardSize])
 // Generate obstacles based on selected level
+// Generate level layout based on level configuration
+  const generateLevelLayout = useCallback((config, currentSnake, currentFood) => {
+    if (config.obstacles === 0) return []
+    
+    const { width, height } = config.boardSize
+    const newObstacles = []
+    
+    // Helper function to check if position is valid
+    const isValidPosition = (x, y) => {
+      return !currentSnake.some(segment => segment.x === x && segment.y === y) &&
+             !(currentFood && currentFood.x === x && currentFood.y === y) &&
+             !newObstacles.some(obs => obs.x === x && obs.y === y) &&
+             !(Math.abs(x - 10) < 3 && Math.abs(y - 10) < 3) // Avoid starting position
+    }
+    
+    switch (config.layoutType) {
+      case 'maze':
+        // Create maze-like walls
+        for (let x = 5; x < width - 5; x += 4) {
+          for (let y = 3; y < height - 3; y += 3) {
+            if (isValidPosition(x, y)) newObstacles.push({ x, y })
+            if (isValidPosition(x + 1, y) && Math.random() > 0.5) newObstacles.push({ x: x + 1, y })
+            if (isValidPosition(x, y + 1) && Math.random() > 0.5) newObstacles.push({ x, y: y + 1 })
+          }
+        }
+        // Add some vertical walls
+        for (let y = 2; y < height - 2; y += 6) {
+          for (let i = 0; i < 3; i++) {
+            const x = Math.floor(width / 3) + i
+            if (isValidPosition(x, y)) newObstacles.push({ x, y })
+            if (isValidPosition(x, y + 1)) newObstacles.push({ x, y: y + 1 })
+          }
+        }
+        break
+        
+      case 'border':
+        // Create border obstacles with gaps
+        const borderGaps = [
+          Math.floor(width * 0.25),
+          Math.floor(width * 0.5),
+          Math.floor(width * 0.75)
+        ]
+        
+        // Top and bottom borders with gaps
+        for (let x = 0; x < width; x++) {
+          if (!borderGaps.includes(x)) {
+            if (isValidPosition(x, 2)) newObstacles.push({ x, y: 2 })
+            if (isValidPosition(x, height - 3)) newObstacles.push({ x, y: height - 3 })
+          }
+        }
+        
+        // Side borders with gaps
+        const verticalGaps = [Math.floor(height * 0.3), Math.floor(height * 0.7)]
+        for (let y = 0; y < height; y++) {
+          if (!verticalGaps.includes(y)) {
+            if (isValidPosition(2, y)) newObstacles.push({ x: 2, y })
+            if (isValidPosition(width - 3, y)) newObstacles.push({ x: width - 3, y })
+          }
+        }
+        
+        // Add some scattered obstacles in the middle
+        for (let i = 0; i < 8; i++) {
+          let attempts = 0
+          let obstacle
+          do {
+            obstacle = {
+              x: Math.floor(Math.random() * (width - 8)) + 4,
+              y: Math.floor(Math.random() * (height - 8)) + 4
+            }
+            attempts++
+          } while (attempts < 20 && !isValidPosition(obstacle.x, obstacle.y))
+          
+          if (attempts < 20) newObstacles.push(obstacle)
+        }
+        break
+        
+      case 'scattered':
+      default:
+        // Scattered random obstacles
+        for (let i = 0; i < config.obstacles; i++) {
+          let obstacle
+          let attempts = 0
+          do {
+            obstacle = {
+              x: Math.floor(Math.random() * width),
+              y: Math.floor(Math.random() * height)
+            }
+            attempts++
+          } while (attempts < 50 && !isValidPosition(obstacle.x, obstacle.y))
+          
+          if (attempts < 50) {
+            newObstacles.push(obstacle)
+          }
+        }
+        break
+    }
+    
+    return newObstacles.slice(0, config.obstacles) // Ensure we don't exceed the obstacle limit
+  }, [])
+
+  // Legacy obstacle generation for backward compatibility
   const generateObstacles = useCallback((obstacleCount, currentSnake, currentFood) => {
     if (obstacleCount === 0) return []
     
@@ -108,7 +233,7 @@ const gameLoopRef = useRef()
     }
     
     return newObstacles
-  }, [boardSize])
+}
 
 // Handle keyboard input
   useEffect(() => {
@@ -163,6 +288,7 @@ const gameLoopRef = useRef()
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
+})
   }, [gameState])
 
 // Game actions ref to handle state updates outside of render
@@ -319,7 +445,7 @@ setDirection({ x: 1, y: 0 })
     setScore(0)
     setLevel(1)
     setGameSpeed(config.speed)
-    setObstacles(generateObstacles(config.obstacles, INITIAL_SNAKE, generateFood(INITIAL_SNAKE)))
+setObstacles(generateLevelLayout(config, INITIAL_SNAKE, generateFood(INITIAL_SNAKE)))
     setGameState('playing')
     toast.info(`${config.name} Game Started! Use WASD or Arrow Keys`, {
       position: "top-center",
@@ -507,7 +633,7 @@ ${isFood ? 'food-item animate-food-bounce' : ''}
                           Choose Your Level
                         </h2>
                         
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 max-w-4xl mx-auto">
                           {Object.entries(LEVEL_CONFIGS).map(([key, config]) => (
                             <motion.div
                               key={key}
@@ -518,17 +644,18 @@ ${isFood ? 'food-item animate-food-bounce' : ''}
                             >
                               <ApperIcon 
                                 name={config.icon} 
-                                className={`w-16 h-16 text-${config.color} mx-auto mb-4`} 
+                                className={`w-12 h-12 text-${config.color} mx-auto mb-3`} 
                               />
-                              <h3 className={`text-2xl font-game text-${config.color} mb-2 neon-text`}>
+                              <h3 className={`text-xl font-game text-${config.color} mb-2 neon-text`}>
                                 {config.name}
                               </h3>
-                              <p className="text-gray-300 mb-4 text-sm">
+                              <p className="text-gray-300 mb-3 text-xs">
                                 {config.description}
                               </p>
-                              <div className="space-y-2 text-xs text-gray-400">
-                                <div>Speed: {config.speed === 250 ? 'Slow' : 'Fast'}</div>
-                                <div>Obstacles: {config.obstacles === 0 ? 'None' : config.obstacles}</div>
+                              <div className="space-y-1 text-xs text-gray-400">
+                                <div>Layout: {config.layoutType === 'empty' ? 'Open' : config.layoutType}</div>
+                                <div>Board: {config.boardSize.width}×{config.boardSize.height}</div>
+                                <div>Speed: {config.speed > 250 ? 'Slow' : config.speed > 150 ? 'Medium' : 'Fast'}</div>
                               </div>
                             </motion.div>
                           ))}
@@ -736,8 +863,9 @@ Snake moves automatically - use WASD to change direction
             </div>
 <div className="flex items-center space-x-2">
                 <ApperIcon name="Square" className="w-4 h-4 text-neon-pink" />
-<span>Choose Easy or Hard difficulty</span>
+                <span>Choose Easy or Hard difficulty</span>
               </div>
+            </div>
           </motion.div>
         </div>
       </div>

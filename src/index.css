@@ -82,6 +82,31 @@
   .level-card-hard {
     @apply border-neon-pink;
   }
+.level-card-beginner {
+    @apply border-neon-green;
+  }
+  
+  .level-card-mazeRunner {
+    @apply border-neon-blue;
+  }
+  
+  .level-card-speedDemon {
+    @apply border-neon-yellow;
+  }
+  
+  .level-card-nightmare {
+    @apply border-neon-pink;
+  }
+  
+  .maze-wall {
+    @apply bg-neon-blue border border-neon-blue;
+    box-shadow: 0 0 8px #0088ff, inset 0 0 8px rgba(255, 255, 255, 0.2);
+  }
+  
+  .border-wall {
+    @apply bg-neon-purple border border-neon-purple;
+    box-shadow: 0 0 8px #8800ff, inset 0 0 8px rgba(255, 255, 255, 0.2);
+  }
   
   .obstacle {
     @apply bg-neon-blue border border-neon-blue;
