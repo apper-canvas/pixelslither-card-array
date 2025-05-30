@@ -101,6 +101,8 @@ const MainFeature = () => {
   useEffect(() => {
     if (gameState !== 'playing') return
 
+// Don't move if no direction is set (prevents false collisions on start)
+    if (direction.x === 0 && direction.y === 0) return
     gameLoopRef.current = setInterval(() => {
       setSnake(prevSnake => {
         const newSnake = [...prevSnake]
