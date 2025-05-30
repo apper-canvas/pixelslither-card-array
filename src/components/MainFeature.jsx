@@ -233,7 +233,7 @@ const gameLoopRef = useRef()
     }
     
     return newObstacles
-}
+}, [boardSize])
 
 // Handle keyboard input
   useEffect(() => {
@@ -288,7 +288,7 @@ const gameLoopRef = useRef()
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-})
+}, [gameState])
   }, [gameState])
 
 // Game actions ref to handle state updates outside of render
@@ -861,10 +861,6 @@ Snake moves automatically - use WASD to change direction
                 <span>Speed increases with level</span>
               </div>
             </div>
-<div className="flex items-center space-x-2">
-                <ApperIcon name="Square" className="w-4 h-4 text-neon-pink" />
-                <span>Choose Easy or Hard difficulty</span>
-              </div>
             </div>
           </motion.div>
         </div>
