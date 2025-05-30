@@ -1,0 +1,123 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  html {
+    @apply scroll-smooth;
+  }
+}
+
+@layer components {
+  .game-pixel {
+    @apply w-4 h-4 border border-gray-600;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+  
+  .snake-segment {
+    @apply bg-neon-green border border-neon-green;
+    box-shadow: 0 0 10px #00ff88, inset 0 0 10px rgba(255, 255, 255, 0.1);
+  }
+  
+  .snake-head {
+    @apply bg-gradient-to-br from-neon-green to-green-400;
+    box-shadow: 0 0 15px #00ff88, inset 0 0 15px rgba(255, 255, 255, 0.2);
+  }
+  
+  .food-item {
+    @apply bg-neon-pink border border-neon-pink rounded-full;
+    box-shadow: 0 0 15px #ff0080, inset 0 0 10px rgba(255, 255, 255, 0.3);
+  }
+  
+  .game-button {
+    @apply px-6 py-3 font-game font-bold text-lg rounded-lg border-2 transition-all duration-300 transform hover:scale-105 active:scale-95;
+  }
+  
+  .neon-button-green {
+    @apply bg-transparent border-neon-green text-neon-green hover:bg-neon-green hover:text-black hover:shadow-neon-green;
+  }
+  
+  .neon-button-pink {
+    @apply bg-transparent border-neon-pink text-neon-pink hover:bg-neon-pink hover:text-black hover:shadow-neon-pink;
+  }
+  
+  .neon-text {
+    @apply font-game font-bold;
+    text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+  }
+  
+  .retro-panel {
+    @apply bg-black bg-opacity-80 border-2 border-neon-green rounded-lg p-4;
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3), inset 0 0 20px rgba(0, 255, 136, 0.1);
+  }
+  
+  .grid-pattern {
+    background-image: 
+      linear-gradient(rgba(0, 255, 136, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 136, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+}
+
+@layer utilities {
+  .text-shadow-glow {
+    text-shadow: 0 0 10px currentColor;
+  }
+  
+  .pixel-perfect {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-neon-green rounded-full;
+  box-shadow: 0 0 10px #00ff88;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary-light;
+}
+
+/* Game canvas specific styles */
+canvas {
+  @apply pixel-perfect;
+  background: radial-gradient(circle at center, rgba(0, 255, 136, 0.05) 0%, transparent 70%);
+}
+
+/* Responsive text sizing */
+@media (max-width: 640px) {
+  .neon-text {
+    font-size: clamp(1rem, 4vw, 2rem);
+  }
+}
+
+/* Dark mode specific adjustments */
+.dark .game-pixel {
+  @apply border-gray-700;
+}
+
+.dark .retro-panel {
+  @apply bg-gray-900 bg-opacity-90;
+}
