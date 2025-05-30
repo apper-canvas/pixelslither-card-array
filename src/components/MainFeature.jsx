@@ -20,7 +20,8 @@ const MainFeature = () => {
     return saved ? parseInt(saved) : 0
   })
   const [gameSpeed, setGameSpeed] = useState(200)
-  const [boardSize, setBoardSize] = useState({ width: 30, height: 20 })
+const [boardSize, setBoardSize] = useState({ width: 30, height: 20 })
+  const [obstacles, setObstacles] = useState([])
 
   const gameLoopRef = useRef()
   const canvasRef = useRef()
@@ -53,6 +54,39 @@ const MainFeature = () => {
       }
     } while (currentSnake.some(segment => segment.x === newFood.x && segment.y === newFood.y))
     return newFood
+  }, [boardSize])
+// Generate obstacles based on level
+  const generateObstacles = useCallback((currentLevel, currentSnake, currentFood) => {
+    if (currentLevel < 2) return []
+    
+    const obstacleCount = currentLevel === 2 ? Math.floor(Math.random() * 3) + 3 : Math.floor(Math.random() * 3) + 6
+    const newObstacles = []
+    
+    for (let i = 0; i < obstacleCount; i++) {
+      let obstacle
+      let attempts = 0
+      do {
+        obstacle = {
+          x: Math.floor(Math.random() * boardSize.width),
+          y: Math.floor(Math.random() * boardSize.height)
+        }
+        attempts++
+      } while (
+        attempts < 50 && (
+          currentSnake.some(segment => segment.x === obstacle.x && segment.y === obstacle.y) ||
+          (currentFood && currentFood.x === obstacle.x && currentFood.y === obstacle.y) ||
+          newObstacles.some(obs => obs.x === obstacle.x && obs.y === obstacle.y) ||
+          // Avoid placing obstacles too close to starting position
+          (Math.abs(obstacle.x - 10) < 3 && Math.abs(obstacle.y - 10) < 3)
+        )
+      )
+      
+      if (attempts < 50) {
+        newObstacles.push(obstacle)
+      }
+    }
+    
+    return newObstacles
   }, [boardSize])
 
   // Handle keyboard input
@@ -169,6 +203,11 @@ const MainFeature = () => {
           gameActionsRef.current.shouldGameOver = true
           return prevSnake
         }
+// Check obstacle collision
+        if (obstacles.some(obstacle => obstacle.x === head.x && obstacle.y === head.y)) {
+          gameActionsRef.current.shouldGameOver = true
+          return prevSnake
+        }
 
         // Check self collision
         if (newSnake.some(segment => segment.x === head.x && segment.y === head.y)) {
@@ -192,6 +231,12 @@ const MainFeature = () => {
             gameActionsRef.current.newLevel = level + 1
             gameActionsRef.current.shouldUpdateSpeed = true
             gameActionsRef.current.newSpeed = Math.max(100, gameSpeed - 20)
+          }
+// Generate obstacles for new level
+          if (newScore > 0 && newScore % (50 * level) === 0) {
+            const newLevel = level + 1
+            const newObstacles = generateObstacles(newLevel, newSnake, generateFood(newSnake))
+            setObstacles(newObstacles)
           }
         } else {
           newSnake.pop()
@@ -222,13 +267,14 @@ const MainFeature = () => {
     }
   }, [gameState, score, highScore])
 
-  const startGame = () => {
+const startGame = () => {
     setSnake(INITIAL_SNAKE)
-setDirection({ x: 1, y: 0 })
+    setDirection({ x: 1, y: 0 })
     setFood(generateFood(INITIAL_SNAKE))
     setScore(0)
     setLevel(1)
     setGameSpeed(200)
+    setObstacles([]) // No obstacles in level 1
     setGameState('playing')
     toast.info('Game Started! Use WASD or Arrow Keys', {
       position: "top-center",
@@ -252,7 +298,7 @@ setDirection({ x: 1, y: 0 })
     }
   }
 
-  const resetGame = () => {
+const resetGame = () => {
     setGameState('waiting')
     setSnake(INITIAL_SNAKE)
     setDirection(INITIAL_DIRECTION)
@@ -260,6 +306,7 @@ setDirection({ x: 1, y: 0 })
     setScore(0)
     setLevel(1)
     setGameSpeed(200)
+    setObstacles([])
   }
 
   // Touch controls for mobile
@@ -304,6 +351,7 @@ setDirection({ x: 1, y: 0 })
                   const isSnakeHead = snake[0] && snake[0].x === x && snake[0].y === y
                   const isSnakeBody = snake.slice(1).some(segment => segment.x === x && segment.y === y)
                   const isFood = food.x === x && food.y === y
+const isObstacle = obstacles.some(obstacle => obstacle.x === x && obstacle.y === y)
 
                   return (
                     <motion.div
@@ -312,7 +360,8 @@ setDirection({ x: 1, y: 0 })
                         border border-gray-800 relative
                         ${isSnakeHead ? 'snake-head' : ''}
                         ${isSnakeBody ? 'snake-segment' : ''}
-                        ${isFood ? 'food-item animate-food-bounce' : ''}
+${isFood ? 'food-item animate-food-bounce' : ''}
+                        ${isObstacle ? 'obstacle' : ''}
                       `}
                       initial={false}
                       animate={isSnakeHead ? { scale: [1, 1.1, 1] } : {}}
@@ -580,6 +629,10 @@ Snake moves automatically - use WASD to change direction
                 <span>Speed increases with level</span>
               </div>
             </div>
+<div className="flex items-center space-x-2">
+                <ApperIcon name="Square" className="w-4 h-4 text-neon-pink" />
+                <span>Obstacles appear at level 2+</span>
+              </div>
           </motion.div>
         </div>
       </div>
