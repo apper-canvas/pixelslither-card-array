@@ -5,7 +5,7 @@ import ApperIcon from './ApperIcon'
 
 const GRID_SIZE = 20
 const INITIAL_SNAKE = [{ x: 10, y: 10 }]
-const INITIAL_DIRECTION = { x: 0, y: 0 }
+const INITIAL_DIRECTION = { x: 1, y: 0 }
 const INITIAL_FOOD = { x: 5, y: 5 }
 
 const MainFeature = () => {
@@ -155,8 +155,6 @@ const MainFeature = () => {
   useEffect(() => {
     if (gameState !== 'playing') return
 
-    // Don't move if no direction is set (prevents false collisions on start)
-    if (direction.x === 0 && direction.y === 0) return
     
     gameLoopRef.current = setInterval(() => {
       setSnake(prevSnake => {
@@ -226,7 +224,7 @@ const MainFeature = () => {
 
   const startGame = () => {
     setSnake(INITIAL_SNAKE)
-    setDirection(INITIAL_DIRECTION)
+setDirection({ x: 1, y: 0 })
     setFood(generateFood(INITIAL_SNAKE))
     setScore(0)
     setLevel(1)
@@ -420,7 +418,7 @@ const MainFeature = () => {
                         Ready to Slither?
                       </h3>
                       <p className="text-gray-300 mb-6 text-sm sm:text-base">
-                        Use WASD or Arrow Keys to control your snake
+Snake moves automatically - use WASD to change direction
                       </p>
                       <button
                         onClick={startGame}
