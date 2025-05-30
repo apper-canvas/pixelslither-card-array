@@ -37,12 +37,7 @@ export default {
           yellow: '#ffff00',
           purple: '#8800ff'
         }
-}
 },
-        border: 'hsl(214.3 31.8% 91.4%)',
-        background: 'hsl(0 0% 3.9%)',
-        foreground: 'hsl(210 40% 98%)'
-      },
       fontFamily: {
         sans: ['Exo 2', 'ui-sans-serif', 'system-ui'],
         heading: ['Orbitron', 'ui-sans-serif', 'system-ui'],
