@@ -8,13 +8,33 @@ const INITIAL_SNAKE = [{ x: 10, y: 10 }]
 const INITIAL_DIRECTION = { x: 1, y: 0 }
 const INITIAL_FOOD = { x: 5, y: 5 }
 
+// Level configurations
+const LEVEL_CONFIGS = {
+  easy: {
+    name: 'Easy',
+    speed: 250,
+    obstacles: 0,
+    description: 'Perfect for beginners',
+    icon: 'Smile',
+    color: 'neon-green'
+  },
+  hard: {
+    name: 'Hard', 
+    speed: 150,
+    obstacles: 8,
+    description: 'Challenge for experts',
+    icon: 'Zap',
+    color: 'neon-pink'
+  }
+}
 const MainFeature = () => {
   const [snake, setSnake] = useState(INITIAL_SNAKE)
   const [direction, setDirection] = useState(INITIAL_DIRECTION)
   const [food, setFood] = useState(INITIAL_FOOD)
-  const [gameState, setGameState] = useState('waiting') // waiting, playing, paused, gameOver
+const [gameState, setGameState] = useState('levelSelection') // levelSelection, waiting, playing, paused, gameOver
   const [score, setScore] = useState(0)
   const [level, setLevel] = useState(1)
+const [selectedLevel, setSelectedLevel] = useState(null)
   const [highScore, setHighScore] = useState(() => {
     const saved = localStorage.getItem('pixelslither-highscore')
     return saved ? parseInt(saved) : 0
@@ -55,11 +75,10 @@ const [boardSize, setBoardSize] = useState({ width: 30, height: 20 })
     } while (currentSnake.some(segment => segment.x === newFood.x && segment.y === newFood.y))
     return newFood
   }, [boardSize])
-// Generate obstacles based on level
-  const generateObstacles = useCallback((currentLevel, currentSnake, currentFood) => {
-    if (currentLevel < 2) return []
+// Generate obstacles based on selected level
+  const generateObstacles = useCallback((obstacleCount, currentSnake, currentFood) => {
+    if (obstacleCount === 0) return []
     
-    const obstacleCount = currentLevel === 2 ? Math.floor(Math.random() * 3) + 3 : Math.floor(Math.random() * 3) + 6
     const newObstacles = []
     
     for (let i = 0; i < obstacleCount; i++) {
@@ -223,21 +242,7 @@ const [boardSize, setBoardSize] = useState({ width: 30, height: 20 })
           gameActionsRef.current.shouldUpdateScore = true
           gameActionsRef.current.newScore = newScore
           gameActionsRef.current.shouldUpdateFood = true
-          gameActionsRef.current.newFood = generateFood(newSnake)
-          
-          // Level up every 5 food items
-          if (newScore > 0 && newScore % (50 * level) === 0) {
-            gameActionsRef.current.shouldLevelUp = true
-            gameActionsRef.current.newLevel = level + 1
-            gameActionsRef.current.shouldUpdateSpeed = true
-            gameActionsRef.current.newSpeed = Math.max(100, gameSpeed - 20)
-          }
-// Generate obstacles for new level
-          if (newScore > 0 && newScore % (50 * level) === 0) {
-            const newLevel = level + 1
-            const newObstacles = generateObstacles(newLevel, newSnake, generateFood(newSnake))
-            setObstacles(newObstacles)
-          }
+gameActionsRef.current.newFood = generateFood(newSnake)
         } else {
           newSnake.pop()
         }
@@ -267,16 +272,28 @@ const [boardSize, setBoardSize] = useState({ width: 30, height: 20 })
     }
   }, [gameState, score, highScore])
 
-const startGame = () => {
+const selectLevel = (levelKey) => {
+    setSelectedLevel(levelKey)
+    setGameState('waiting')
+    toast.success(`${LEVEL_CONFIGS[levelKey].name} Level Selected!`, {
+      position: "top-center",
+      autoClose: 1500,
+    })
+  }
+
+  const startGame = () => {
+    if (!selectedLevel) return
+    
+    const config = LEVEL_CONFIGS[selectedLevel]
     setSnake(INITIAL_SNAKE)
     setDirection({ x: 1, y: 0 })
     setFood(generateFood(INITIAL_SNAKE))
     setScore(0)
     setLevel(1)
-    setGameSpeed(200)
-    setObstacles([]) // No obstacles in level 1
+    setGameSpeed(config.speed)
+    setObstacles(generateObstacles(config.obstacles, INITIAL_SNAKE, generateFood(INITIAL_SNAKE)))
     setGameState('playing')
-    toast.info('Game Started! Use WASD or Arrow Keys', {
+    toast.info(`${config.name} Game Started! Use WASD or Arrow Keys`, {
       position: "top-center",
       autoClose: 2000,
     })
@@ -299,7 +316,8 @@ const startGame = () => {
   }
 
 const resetGame = () => {
-    setGameState('waiting')
+    setGameState('levelSelection')
+    setSelectedLevel(null)
     setSnake(INITIAL_SNAKE)
     setDirection(INITIAL_DIRECTION)
     setFood(INITIAL_FOOD)
@@ -442,6 +460,60 @@ ${isFood ? 'food-item animate-food-bounce' : ''}
               </AnimatePresence>
 
               {/* Waiting to Start Overlay */}
+{/* Level Selection Overlay */}
+              <AnimatePresence>
+                {gameState === 'levelSelection' && (
+                  <motion.div
+                    className="absolute inset-0 bg-black bg-opacity-95 flex items-center justify-center rounded-lg p-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <div className="text-center max-w-4xl w-full">
+                      <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <h2 className="text-3xl sm:text-4xl font-game text-neon-green mb-8 neon-text">
+                          Choose Your Level
+                        </h2>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                          {Object.entries(LEVEL_CONFIGS).map(([key, config]) => (
+                            <motion.div
+                              key={key}
+                              className={`level-card level-card-${key}`}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => selectLevel(key)}
+                            >
+                              <ApperIcon 
+                                name={config.icon} 
+                                className={`w-16 h-16 text-${config.color} mx-auto mb-4`} 
+                              />
+                              <h3 className={`text-2xl font-game text-${config.color} mb-2 neon-text`}>
+                                {config.name}
+                              </h3>
+                              <p className="text-gray-300 mb-4 text-sm">
+                                {config.description}
+                              </p>
+                              <div className="space-y-2 text-xs text-gray-400">
+                                <div>Speed: {config.speed === 250 ? 'Slow' : 'Fast'}</div>
+                                <div>Obstacles: {config.obstacles === 0 ? 'None' : config.obstacles}</div>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                        
+                        <p className="text-gray-400 mt-6 text-sm">
+                          Select a difficulty level to begin your slithering adventure
+                        </p>
+                      </motion.div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <AnimatePresence>
                 {gameState === 'waiting' && (
                   <motion.div
@@ -466,6 +538,11 @@ ${isFood ? 'food-item animate-food-bounce' : ''}
                       <h3 className="text-2xl sm:text-3xl font-game text-neon-green mb-4 neon-text">
                         Ready to Slither?
                       </h3>
+{selectedLevel && (
+                        <p className={`text-${LEVEL_CONFIGS[selectedLevel].color} mb-2 font-game`}>
+                          {LEVEL_CONFIGS[selectedLevel].name} Level Selected
+                        </p>
+                      )}
                       <p className="text-gray-300 mb-6 text-sm sm:text-base">
 Snake moves automatically - use WASD to change direction
                       </p>
@@ -631,7 +708,7 @@ Snake moves automatically - use WASD to change direction
             </div>
 <div className="flex items-center space-x-2">
                 <ApperIcon name="Square" className="w-4 h-4 text-neon-pink" />
-                <span>Obstacles appear at level 2+</span>
+<span>Choose Easy or Hard difficulty</span>
               </div>
           </motion.div>
         </div>
