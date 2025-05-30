@@ -97,12 +97,67 @@ const MainFeature = () => {
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [gameState])
 
+// Game actions ref to handle state updates outside of render
+  const gameActionsRef = useRef({
+    shouldGameOver: false,
+    shouldUpdateScore: false,
+    newScore: 0,
+    shouldLevelUp: false,
+    newLevel: 0,
+    shouldUpdateFood: false,
+    newFood: null,
+    shouldUpdateSpeed: false,
+    newSpeed: 0
+  })
+
+  // Process game actions in separate effect to avoid setState during render
+  useEffect(() => {
+    const actions = gameActionsRef.current
+    
+    if (actions.shouldGameOver) {
+      setGameState('gameOver')
+      actions.shouldGameOver = false
+    }
+    
+    if (actions.shouldUpdateScore) {
+      setScore(actions.newScore)
+      actions.shouldUpdateScore = false
+      
+      toast.success(`+${10 * level} points!`, {
+        position: "top-right",
+        autoClose: 1000,
+      })
+    }
+    
+    if (actions.shouldUpdateFood && actions.newFood) {
+      setFood(actions.newFood)
+      actions.shouldUpdateFood = false
+      actions.newFood = null
+    }
+    
+    if (actions.shouldLevelUp) {
+      setLevel(actions.newLevel)
+      actions.shouldLevelUp = false
+      
+      toast.success(`Level ${actions.newLevel}! Speed increased!`, {
+        position: "top-center",
+        autoClose: 2000,
+      })
+    }
+    
+    if (actions.shouldUpdateSpeed) {
+      setGameSpeed(actions.newSpeed)
+      actions.shouldUpdateSpeed = false
+    }
+  })
+
   // Game loop
   useEffect(() => {
     if (gameState !== 'playing') return
 
-// Don't move if no direction is set (prevents false collisions on start)
+    // Don't move if no direction is set (prevents false collisions on start)
     if (direction.x === 0 && direction.y === 0) return
+    
     gameLoopRef.current = setInterval(() => {
       setSnake(prevSnake => {
         const newSnake = [...prevSnake]
@@ -113,13 +168,13 @@ const MainFeature = () => {
 
         // Check wall collision
         if (head.x < 0 || head.x >= boardSize.width || head.y < 0 || head.y >= boardSize.height) {
-          setGameState('gameOver')
+          gameActionsRef.current.shouldGameOver = true
           return prevSnake
         }
 
         // Check self collision
         if (newSnake.some(segment => segment.x === head.x && segment.y === head.y)) {
-          setGameState('gameOver')
+          gameActionsRef.current.shouldGameOver = true
           return prevSnake
         }
 
@@ -128,23 +183,18 @@ const MainFeature = () => {
         // Check food collision
         if (head.x === food.x && head.y === food.y) {
           const newScore = score + (10 * level)
-          setScore(newScore)
-          setFood(generateFood(newSnake))
+          gameActionsRef.current.shouldUpdateScore = true
+          gameActionsRef.current.newScore = newScore
+          gameActionsRef.current.shouldUpdateFood = true
+          gameActionsRef.current.newFood = generateFood(newSnake)
           
           // Level up every 5 food items
           if (newScore > 0 && newScore % (50 * level) === 0) {
-            setLevel(prev => prev + 1)
-            setGameSpeed(prev => Math.max(100, prev - 20))
-            toast.success(`Level ${level + 1}! Speed increased!`, {
-              position: "top-center",
-              autoClose: 2000,
-            })
+            gameActionsRef.current.shouldLevelUp = true
+            gameActionsRef.current.newLevel = level + 1
+            gameActionsRef.current.shouldUpdateSpeed = true
+            gameActionsRef.current.newSpeed = Math.max(100, gameSpeed - 20)
           }
-          
-          toast.success(`+${10 * level} points!`, {
-            position: "top-right",
-            autoClose: 1000,
-          })
         } else {
           newSnake.pop()
         }
