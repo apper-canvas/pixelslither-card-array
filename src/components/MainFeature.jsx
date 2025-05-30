@@ -43,8 +43,10 @@ const [selectedLevel, setSelectedLevel] = useState(null)
 const [boardSize, setBoardSize] = useState({ width: 30, height: 20 })
   const [obstacles, setObstacles] = useState([])
 
-  const gameLoopRef = useRef()
+const gameLoopRef = useRef()
   const canvasRef = useRef()
+  const directionQueueRef = useRef([])
+  const currentDirectionRef = useRef(INITIAL_DIRECTION)
 
   // Responsive board sizing
   useEffect(() => {
@@ -108,7 +110,7 @@ const [boardSize, setBoardSize] = useState({ width: 30, height: 20 })
     return newObstacles
   }, [boardSize])
 
-  // Handle keyboard input
+// Handle keyboard input
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (gameState !== 'playing') return
@@ -131,13 +133,26 @@ const [boardSize, setBoardSize] = useState({ width: 30, height: 20 })
       const newDirection = keyMap[e.key]
       if (newDirection) {
         e.preventDefault()
-        setDirection(prev => {
-          // Prevent reversing into self
-          if (prev.x === -newDirection.x && prev.y === -newDirection.y) {
-            return prev
+        
+        // Add to direction queue instead of setting immediately
+        const currentDir = currentDirectionRef.current
+        const lastQueuedDir = directionQueueRef.current.length > 0 
+          ? directionQueueRef.current[directionQueueRef.current.length - 1] 
+          : currentDir
+
+        // Prevent reversing into self
+        if (lastQueuedDir.x === -newDirection.x && lastQueuedDir.y === -newDirection.y) {
+          return
+        }
+
+        // Only add if different from last queued direction
+        if (lastQueuedDir.x !== newDirection.x || lastQueuedDir.y !== newDirection.y) {
+          directionQueueRef.current.push(newDirection)
+          // Keep queue limited to prevent excessive buffering
+          if (directionQueueRef.current.length > 3) {
+            directionQueueRef.current.shift()
           }
-          return newDirection
-        })
+        }
       }
 
       if (e.key === ' ') {
@@ -217,20 +232,31 @@ const [boardSize, setBoardSize] = useState({ width: 30, height: 20 })
         head.x += direction.x
         head.y += direction.y
 
-        // Check wall collision
-        if (head.x < 0 || head.x >= boardSize.width || head.y < 0 || head.y >= boardSize.height) {
-          gameActionsRef.current.shouldGameOver = true
-          return prevSnake
+// Process direction queue
+        if (directionQueueRef.current.length > 0) {
+          const nextDirection = directionQueueRef.current.shift()
+          currentDirectionRef.current = nextDirection
+          setDirection(nextDirection)
         }
-// Check obstacle collision
-        if (obstacles.some(obstacle => obstacle.x === head.x && obstacle.y === head.y)) {
-          gameActionsRef.current.shouldGameOver = true
+
+        // Check wall collision - immediate game over
+        if (head.x < 0 || head.x >= boardSize.width || head.y < 0 || head.y >= boardSize.height) {
+          clearInterval(gameLoopRef.current)
+          setGameState('gameOver')
           return prevSnake
         }
 
-        // Check self collision
+        // Check obstacle collision - immediate game over
+        if (obstacles.some(obstacle => obstacle.x === head.x && obstacle.y === head.y)) {
+          clearInterval(gameLoopRef.current)
+          setGameState('gameOver')
+          return prevSnake
+        }
+
+        // Check self collision - immediate game over
         if (newSnake.some(segment => segment.x === head.x && segment.y === head.y)) {
-          gameActionsRef.current.shouldGameOver = true
+          clearInterval(gameLoopRef.current)
+          setGameState('gameOver')
           return prevSnake
         }
 
@@ -286,7 +312,9 @@ const selectLevel = (levelKey) => {
     
     const config = LEVEL_CONFIGS[selectedLevel]
     setSnake(INITIAL_SNAKE)
-    setDirection({ x: 1, y: 0 })
+setDirection({ x: 1, y: 0 })
+    currentDirectionRef.current = { x: 1, y: 0 }
+    directionQueueRef.current = []
     setFood(generateFood(INITIAL_SNAKE))
     setScore(0)
     setLevel(1)
